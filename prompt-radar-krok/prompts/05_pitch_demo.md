@@ -12,6 +12,7 @@
 - `C:\Users\aleks\Downloads\кейс КРОК __ текст.pdf`
 - `C:\Users\aleks\Downloads\кейс КРОК (презентация).pdf`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\CASE_CONTEXT.md`
+- `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\STAKEHOLDER_INTERVIEW.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\DECISION_LOG.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\docs\STRATEGY.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\docs\RED_TEAM.md`
@@ -38,6 +39,10 @@
 
 Повествование должно идти от боли CTO к решению и действию, а не от списка
 использованных библиотек.
+
+Обязательно объясни парадокс: у агентской платформы меньше пользователей, но в
+пять раз больше токенов. Покажи, что правильная единица эффективности —
+завершённая бизнес-задача и её net value, а не пользователь или токен.
 
 ## Результат
 

@@ -14,6 +14,7 @@
 - `C:\Users\aleks\Downloads\кейс КРОК __ текст.pdf`
 - `C:\Users\aleks\Downloads\Темы для генерации датасета.xlsx`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\CASE_CONTEXT.md`
+- `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\STAKEHOLDER_INTERVIEW.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\DECISION_LOG.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\docs\STRATEGY.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\docs\RED_TEAM.md`
@@ -54,8 +55,10 @@ commit чужие или временные файлы. Не выполняй de
 4. Реализуй классификацию и use-case discovery.
 5. Добавь grounded summaries и confidence.
 6. Подключи dashboard.
-7. Добавь evaluation, тесты и README.
-8. Проверь чистый запуск.
+7. Добавь unit economics на уровне agent run и сценария.
+8. Добавь sensitivity analysis для экспертных assumptions.
+9. Добавь evaluation, тесты и README.
+10. Проверь чистый запуск.
 
 ## Инженерные требования
 
@@ -70,6 +73,10 @@ commit чужие или временные файлы. Не выполняй de
 - защита от prompt injection;
 - маркировка синтетических данных;
 - никаких вымышленных CTO-метрик.
+- внутренние LLM-вызовы одного agent run не считать отдельными полезными
+  задачами;
+- экспертные baseline minutes хранить с источником и confidence;
+- показывать gross value, cost и net value раздельно.
 
 ## Gate
 

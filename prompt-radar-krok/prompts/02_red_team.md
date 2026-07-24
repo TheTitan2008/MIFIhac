@@ -13,6 +13,7 @@
 - `C:\Users\aleks\Downloads\кейс КРОК (презентация).pdf`
 - `C:\Users\aleks\Downloads\Темы для генерации датасета.xlsx`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\CASE_CONTEXT.md`
+- `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\STAKEHOLDER_INTERVIEW.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\DECISION_LOG.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\docs\STRATEGY.md`
 
@@ -32,6 +33,12 @@
 - где кластеры могут быть нестабильны;
 - где LLM может галлюцинировать;
 - где отсутствует доказательство бизнес-пользы;
+- где ROI основан на спорном baseline или двойном подсчёте внутренних
+  LLM-вызовов;
+- где сравнение 1300 пользователей веб-чата и 150 пользователей агентской
+  платформы методологически неверно;
+- где высокая стоимость токенов ошибочно трактуется как высокая или низкая
+  ценность;
 - где возможны prompt injection и утечки PII;
 - что сломается на длинных запросах;
 - что не успеют сделать за хакатон;

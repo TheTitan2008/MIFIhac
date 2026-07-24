@@ -12,6 +12,7 @@
 
 - `C:\Users\aleks\Downloads\кейс КРОК __ текст.pdf`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\CASE_CONTEXT.md`
+- `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\STAKEHOLDER_INTERVIEW.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\DECISION_LOG.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\docs\QA_REPORT.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\docs\PITCH.md`
@@ -35,6 +36,8 @@
 - лицензии и источники моделей указаны;
 - синтетические данные помечены;
 - обещания в питче совпадают с прототипом.
+- экономическая модель не скрывает assumptions и не считает внутренние
+  LLM-вызовы отдельными бизнес-результатами.
 
 ## Результат
 

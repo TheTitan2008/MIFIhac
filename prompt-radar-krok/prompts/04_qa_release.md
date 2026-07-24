@@ -11,6 +11,7 @@
 
 - `C:\Users\aleks\Downloads\кейс КРОК __ текст.pdf`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\CASE_CONTEXT.md`
+- `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\STAKEHOLDER_INTERVIEW.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\DECISION_LOG.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\docs\STRATEGY.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\docs\RED_TEAM.md`
@@ -29,6 +30,9 @@
 - детерминированность генератора;
 - отсутствие утечек между train/test;
 - честность метрик;
+- отсутствие двойного подсчёта внутренних LLM-вызовов;
+- корректность формул saved time, cost, net value и ROI;
+- отображение неопределённости экспертных baseline;
 - качество multi-label классификации;
 - устойчивость группировки;
 - groundedness названий и саммари;
