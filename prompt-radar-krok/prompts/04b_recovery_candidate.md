@@ -11,11 +11,14 @@
 
 - `C:\Users\aleks\Downloads\кейс КРОК __ текст.pdf`
 - `C:\Users\aleks\Downloads\Темы для генерации датасета.xlsx`
+- `C:\Users\aleks\Downloads\Telegram Desktop\Структура запроса.txt`
+- `C:\Users\aleks\Downloads\Telegram Desktop\ChatExport_2026-07-24\messages.html`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\docs\STRATEGY.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\docs\RED_TEAM.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\docs\P0_PLAN.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\docs\QA_REPORT.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\DECISION_LOG.md`
+- `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\TELEGRAM_FINDINGS.md`
 
 ## Роль
 
@@ -49,8 +52,19 @@
    - правило `create` против `update`;
    - неоднозначные случаи и abstention;
    - построчная evidence requirement.
-2. Улучши общую multi-label логику только на разрешённых development-источниках.
-3. Добавь внешний интерфейс:
+2. Реализуй OpenAI-compatible ingestion adapter:
+   - разбор `messages` по ролям;
+   - выделение current user goal;
+   - отделение system/history/assistant/RAG context;
+   - извлечение `<user_query>` и дедупликация повторённого query;
+   - redaction до persistence;
+   - явный abstention для неизвестного payload;
+   - метрики context/goal token ratio.
+3. Добавь regression fixture на структуре из
+   `Структура запроса.txt` и 100k message-aware cases. Тема длинного RAG
+   context не должна менять intent короткой пользовательской цели.
+4. Улучши общую multi-label логику только на разрешённых development-источниках.
+5. Добавь внешний интерфейс:
 
 ```text
 python -m prompt_radar evaluate-external --input <opaque.jsonl> --output <dir>
@@ -58,22 +72,21 @@ python -m prompt_radar evaluate-external --input <opaque.jsonl> --output <dir>
 
    Он должен принимать challenge после freeze, считать заранее определённые
    метрики и не менять модель, taxonomy, thresholds или config.
-4. Протестируй интерфейс на dummy development fixture, не имитирующем будущий
+6. Протестируй интерфейс на dummy development fixture, не имитирующем будущий
    sealed v2.
-5. Сохрани прежний sealed v1 failure как исторический diagnostic.
-6. Запусти unit/regression tests, security scan и обычный offline smoke.
-7. Создай `docs/RECOVERY_FREEZE.md`:
+7. Сохрани прежний sealed v1 failure как исторический diagnostic.
+8. Запусти unit/regression tests, security scan и обычный offline smoke.
+9. Создай `docs/RECOVERY_FREEZE.md`:
    - commit SHA кандидата;
    - source/config/taxonomy hashes;
    - фиксированные gates;
    - список использованных development-источников;
    - декларацию, что sealed v2 ещё не существовал.
-8. Закоммить и push ветку `codex/p0-recovery-v2`.
-9. Остановись. Не запускай финальную оценку и не создавай PR/merge.
+10. Закоммить и push ветку `codex/p0-recovery-v2`.
+11. Остановись. Не запускай финальную оценку и не создавай PR/merge.
 
 ## Критерий готовности
 
 Есть неизменяемый candidate commit и внешний evaluation interface. После
 freeze никакие изменения классификатора, taxonomy, thresholds и label guide
 до получения результата sealed v2 недопустимы.
-

@@ -15,6 +15,14 @@
 
 `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\STAKEHOLDER_INTERVIEW.md`
 
+Обязательные уточнения из Telegram и реальный формат payload:
+
+`C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\TELEGRAM_FINDINGS.md`
+
+Репрезентативный OpenAI-compatible payload:
+
+`C:\Users\aleks\Downloads\Telegram Desktop\Структура запроса.txt`
+
 Реальная управленческая потребность — доказать экономическую эффективность
 агентской платформы. Обычный LLM-чат уже оценивается через экспертные минуты по
 категории и коэффициент длины сессии. Агентская платформа имеет около 150
@@ -73,11 +81,12 @@ Excel содержит 31 исходную тему в диапазоне `Ли�
 - HR, обратная связь и заметки;
 - периодические мониторинги и уведомления.
 
-## Неоднозначности
+## Подтверждения и неоднозначности
 
-- Фраза «средний размер запроса — 100k токенов» выглядит ошибкой или требует
-  уточнения. Архитектура должна поддерживать длинный ввод, но не предполагать,
-  что все запросы действительно имеют такой объём.
+- Требование 100k токенов подтверждено экспертом как размер одного agent
+  request payload. Payload включает массив OpenAI-compatible `messages`,
+  историю, assistant responses и RAG context. Нужен message-aware extraction,
+  а не классификация плоской конкатенации.
 - «Сломанные запросы» нельзя определить только по тексту запроса. Для честной
   метрики нужны ответ, ошибка, повтор, latency или feedback.
 - Рост сценариев нельзя показать без timestamp.
@@ -133,6 +142,8 @@ baseline_confidence
 
 ```text
 ingestion
+→ OpenAI-compatible message parser
+→ current goal / history / RAG context separation
 → очистка / PII masking / дедупликация
 → структурная multi-label классификация
 → embeddings

@@ -13,8 +13,10 @@
 
 - `C:\Users\aleks\Downloads\кейс КРОК __ текст.pdf`
 - `C:\Users\aleks\Downloads\Темы для генерации датасета.xlsx`
+- `C:\Users\aleks\Downloads\Telegram Desktop\Структура запроса.txt`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\CASE_CONTEXT.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\STAKEHOLDER_INTERVIEW.md`
+- `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\TELEGRAM_FINDINGS.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\DECISION_LOG.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\docs\STRATEGY.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\docs\RED_TEAM.md`
@@ -50,15 +52,16 @@ commit чужие или временные файлы. Не выполняй de
 ## Порядок реализации
 
 1. Создай технический план и структуру репозитория.
-2. Сначала сделай вертикальный slice на небольшом наборе данных.
-3. Добавь воспроизводимый генератор с seed.
-4. Реализуй классификацию и use-case discovery.
-5. Добавь grounded summaries и confidence.
-6. Подключи dashboard.
-7. Добавь unit economics на уровне agent run и сценария.
-8. Добавь sensitivity analysis для экспертных assumptions.
-9. Добавь evaluation, тесты и README.
-10. Проверь чистый запуск.
+2. Реализуй OpenAI-compatible message-aware ingestion.
+3. Сначала сделай вертикальный slice на небольшом наборе данных.
+4. Добавь воспроизводимый генератор с seed.
+5. Реализуй классификацию и use-case discovery.
+6. Добавь grounded summaries и confidence.
+7. Подключи dashboard.
+8. Добавь unit economics на уровне agent run и сценария.
+9. Добавь sensitivity analysis для экспертных assumptions.
+10. Добавь evaluation, тесты и README.
+11. Проверь чистый запуск.
 
 ## Инженерные требования
 
@@ -77,6 +80,9 @@ commit чужие или временные файлы. Не выполняй de
   задачами;
 - экспертные baseline minutes хранить с источником и confidence;
 - показывать gross value, cost и net value раздельно.
+- не классифицировать конкатенацию полного `messages` payload;
+- отделять current user goal от system/history/assistant/RAG context;
+- поддерживать OpenAI-compatible JSON и буквальный 100k request payload.
 
 ## Gate
 

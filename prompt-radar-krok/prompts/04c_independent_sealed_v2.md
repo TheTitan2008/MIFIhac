@@ -10,7 +10,9 @@
 
 - `C:\Users\aleks\Downloads\кейс КРОК __ текст.pdf`
 - `C:\Users\aleks\Downloads\Темы для генерации датасета.xlsx`
+- `C:\Users\aleks\Downloads\Telegram Desktop\Структура запроса.txt`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\docs\QA_REPORT.md`
+- `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\context\TELEGRAM_FINDINGS.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\docs\LABEL_GUIDE.md`
 - `C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok\docs\RECOVERY_FREEZE.md`
 
@@ -35,6 +37,8 @@ label guide, pipeline или tests после создания challenge.
    - опечатки, разговорная речь и multi-intent;
    - несколько допустимых abstention cases;
    - без копирования development-шаблонов.
+   Как минимум 8 строк должны быть OpenAI-compatible multi-message payload,
+   где длинный RAG context тематически отличается от короткого current query.
 3. Разметь каждую строку по `LABEL_GUIDE.md` с:
    - expected labels;
    - evidence span;
@@ -65,4 +69,3 @@ label guide, pipeline или tests после создания challenge.
 Если gate не пройден, результат остаётся `NO-GO`. Второй sealed v2 создавать
 нельзя. Следующий цикл должен называться v3 и начинаться с нового candidate
 freeze.
-
