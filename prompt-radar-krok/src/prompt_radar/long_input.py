@@ -36,9 +36,11 @@ def sketch_long_text(text: str) -> dict[str, object]:
     redacted, redactions, injection, status = redact(sketch)
     labels, confidence, abstain, _ = classify(redacted)
     coverage = len(selected) / len(chunks) if chunks else 1.0
-    warning = coverage < 0.15 and not ({"Email", "Project"} <= set(labels["system"]))
+    warning = coverage < 0.15
     if warning:
         abstain = sorted(set(abstain + ["system", "intent", "object"]))
+        for axis in ("system", "intent", "object"):
+            labels[axis] = []
     return {
         "request_token_count": len(words),
         "chunks_total": len(chunks),

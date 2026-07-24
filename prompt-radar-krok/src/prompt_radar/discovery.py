@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import random
+import hashlib
 from collections import Counter, defaultdict
 from dataclasses import asdict
 
-from .config import RESIDUAL_SIMILARITY_THRESHOLD, SEED
+from .config import KNOWN_USE_CASES, RESIDUAL_SIMILARITY_THRESHOLD, SEED
 from .contracts import AnalysisRecord, RequestRecord
 from .vector import similarity
 
@@ -118,30 +119,57 @@ def build_passport(
         if group_count >= 4
         and cohesion >= 0.25
         and float(stability["mean_jaccard"]) >= 0.75
+        and all(
+            "system" not in item.abstain_axes
+            and "business_domain" not in item.abstain_axes
+            for item in members
+        )
         else "unresolved"
+    )
+    member_ids = sorted(item.request_id for item in members)
+    scenario_id = "residual-" + hashlib.sha256(
+        "|".join(member_ids).encode("utf-8")
+    ).hexdigest()[:12]
+    top_systems = [
+        label for label, _ in sorted(systems.items(), key=lambda item: (-item[1], item[0]))
+    ][:2]
+    top_intents = [
+        label for label, _ in sorted(intents.items(), key=lambda item: (-item[1], item[0]))
+    ][:2]
+    system_name = " + ".join(top_systems) if top_systems else "Неопределённая система"
+    intent_name = " + ".join(top_intents) if top_intents else "неопределённое действие"
+    nearest_known_similarity = max(
+        (
+            similarity(member.redacted_text, candidate["prototype"])
+            for member in members
+            for candidate in KNOWN_USE_CASES
+        ),
+        default=0.0,
     )
     examples = [item.redacted_text[:240] for item in members[:3]]
     return {
-        "scenario_id": "emerging-email-project" if status == "emerging" else "unresolved-residual",
-        "name": "Email → создание задач в Project",
+        "scenario_id": scenario_id,
+        "name": f"{system_name} → {intent_name}",
         "status": status,
         "summary": (
             f"{group_count} независимых формулировок объединяют "
-            f"{', '.join(systems.keys())} и действие {', '.join(intents.keys())}. "
+            f"{system_name} и действие {intent_name}. "
             "Название извлечено только из redacted evidence."
         ),
         "naming_method": "extractive",
         "support_requests": len(members),
         "support_canonical_groups": group_count,
         "cohesion": round(cohesion, 4),
-        "distinctness": round(max(0.0, 1.0 - cohesion / 2), 4),
+        "distinctness": round(max(0.0, 1.0 - nearest_known_similarity), 4),
         "stability": stability,
         "systems": dict(systems),
         "intents": dict(intents),
         "examples": examples,
         "evidence_ids": [item.request_id for item in members[:3]],
-        "synthetic_flag": True,
-        "sealed_challenge": True,
+        "synthetic_flag": all(record_by_id[item.request_id].synthetic_flag for item in members),
+        "sealed_challenge": bool(members) and all(
+            record_by_id[item.request_id].split == "test" for item in members
+        ),
         "action": "VALIDATE",
         "action_rule": "E0 and synthetic evidence prohibit SCALE/AUTOMATE.",
         "dynamics": "N/A: synthetic timestamps are not business evidence",

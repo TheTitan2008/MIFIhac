@@ -37,7 +37,7 @@ PowerShell:
 
 ```powershell
 cd C:\Users\aleks\OneDrive\Документы\MIFI\prompt-radar-krok
-py -3.12 -m venv .venv
+py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe -m pip install -e .
 

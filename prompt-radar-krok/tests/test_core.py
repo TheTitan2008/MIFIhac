@@ -5,6 +5,7 @@ import unittest
 import zipfile
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import patch
 from xml.sax.saxutils import escape
 
 from prompt_radar.classifier import classify
@@ -12,7 +13,7 @@ from prompt_radar.economics import calculate_economics, synthetic_run_fixture
 from prompt_radar.evaluation import classification_metrics
 from prompt_radar.generator import manual_records
 from prompt_radar.long_input import sketch_long_text
-from prompt_radar.pipeline import analyze, run_pipeline
+from prompt_radar.pipeline import _render_html, analyze, run_pipeline
 from prompt_radar.security import redact
 from prompt_radar.source import read_topics_xlsx
 
@@ -70,6 +71,11 @@ class CoreTests(unittest.TestCase):
         self.assertNotIn("ivan.petrov", cleaned)
         self.assertIn("[UNTRUSTED_INSTRUCTION]", cleaned)
 
+    def test_uncertain_named_person_is_quarantined(self) -> None:
+        cleaned, _, _, status = redact("ФИО: Иван Петров просит показать отчёт")
+        self.assertEqual(status, "quarantine")
+        self.assertEqual(cleaned, "[QUARANTINED]")
+
     def test_manual_key_axes_exceed_gate(self) -> None:
         records = manual_records()
         metrics = classification_metrics(records, analyze(records))
@@ -97,7 +103,25 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(set(report["status_counts"]), {"success", "partial", "failed", "cancelled"})
         failed = report["scenarios"]["base"]["runs"][2]
         self.assertLess(failed["net_value_marginal"], 0)
+        success = report["scenarios"]["base"]["runs"][0]
+        self.assertEqual(success["raw_net_saved_minutes"], 30.0)
+        self.assertAlmostEqual(
+            success["roi_marginal"],
+            success["net_value_marginal"] / success["marginal_cost"],
+            places=4,
+        )
+        totals = report["scenarios"]["base"]["totals"]
+        self.assertAlmostEqual(
+            totals["roi_fully_loaded"],
+            totals["net_value_fully_loaded"] / totals["fully_loaded_cost"],
+            places=4,
+        )
         self.assertEqual(report["action"], "VALIDATE")
+
+    def test_economics_rejects_duplicate_run_id(self) -> None:
+        runs, steps = synthetic_run_fixture()
+        with self.assertRaisesRegex(ValueError, "Duplicate run_id"):
+            calculate_economics(runs + [dict(runs[0])], steps)
 
     def test_long_input_retains_goal_or_abstains(self) -> None:
         words = ["контекст"] * 10_000
@@ -106,6 +130,15 @@ class CoreTests(unittest.TestCase):
         result = sketch_long_text(" ".join(words))
         systems = set(result["labels"]["system"])
         self.assertTrue({"Email", "Project"} <= systems or result["coverage_warning"])
+
+    def test_100k_partial_coverage_is_explicit_abstention(self) -> None:
+        words = ["контекст"] * 100_000
+        goal = "Создай тикеты Project по входящим письмам почты".split()
+        words[50_000 : 50_000 + len(goal)] = goal
+        result = sketch_long_text(" ".join(words))
+        self.assertTrue(result["coverage_warning"])
+        self.assertEqual(result["labels"]["system"], [])
+        self.assertTrue({"system", "intent", "object"} <= set(result["abstain_axes"]))
 
     def test_pipeline_writes_offline_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -118,6 +151,11 @@ class CoreTests(unittest.TestCase):
             self.assertTrue(summary["evaluation"]["leakage"]["passed"])
             self.assertTrue(summary["security"]["passed"])
             self.assertEqual(summary["passport"]["status"], "emerging")
+            grouping = summary["evaluation"]["grouping"]
+            self.assertEqual(grouping["sealed_members_recovered"], 5)
+            self.assertEqual(grouping["sealed_members_total"], 6)
+            self.assertLess(grouping["sealed_bcubed_f1"], 1.0)
+            self.assertEqual(grouping["known_only_false_emerging"], 0)
             for name in (
                 "summary.json",
                 "evaluation.md",
@@ -126,6 +164,26 @@ class CoreTests(unittest.TestCase):
                 "request_event.parquet",
             ):
                 self.assertTrue((output / name).exists(), name)
+
+    def test_pipeline_runtime_has_offline_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "topics.xlsx"
+            write_fixture_xlsx(source)
+            with patch("socket.socket.connect", side_effect=AssertionError("network used")):
+                summary = run_pipeline(source, root / "offline", include_100k=False)
+        self.assertEqual(summary["manifest"]["external_network_calls"], 0)
+
+    def test_static_dashboard_escapes_untrusted_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "topics.xlsx"
+            write_fixture_xlsx(source)
+            summary = run_pipeline(source, root / "artifacts", include_100k=False)
+        summary["passport"]["examples"] = ["<script>alert('x')</script>"]
+        rendered = _render_html(summary)
+        self.assertNotIn("<script>", rendered)
+        self.assertIn("&lt;script&gt;", rendered)
 
 
 if __name__ == "__main__":

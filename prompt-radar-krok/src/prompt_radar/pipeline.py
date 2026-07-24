@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import html
 import json
 import os
 import platform
@@ -128,7 +129,13 @@ def _render_html(summary: dict[str, Any]) -> str:
     passport = summary["passport"]
     economics = summary["economics"]
     base = economics["scenarios"]["base"]["totals"]
-    examples = "".join(f"<li>{item}</li>" for item in passport["examples"])
+    examples = "".join(f"<li>{html.escape(str(item))}</li>" for item in passport["examples"])
+    passport_name = html.escape(str(passport["name"]))
+    passport_summary = html.escape(str(passport["summary"]))
+    passport_status = html.escape(str(passport["status"]))
+    passport_action = html.escape(str(passport["action"]))
+    passport_dynamics = html.escape(str(passport["dynamics"]))
+    passport_failure = html.escape(str(passport["failure_signal"]))
     return f"""<!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><title>Prompt Radar</title>
 <style>
@@ -145,9 +152,9 @@ h1,h2{{color:#0b5d57}} .metric{{font-size:28px;font-weight:700}} code{{word-brea
 <div class="card"><div class="metric">{passport["stability"]["mean_jaccard"]:.2f}</div>mean aligned Jaccard</div>
 <div class="card"><div class="metric">{economics["business_task_count"]}</div>distinct validated runs</div>
 </div>
-<h2>{passport["name"]}</h2><div class="card"><p>{passport["summary"]}</p>
-<p><b>Status:</b> {passport["status"]}; <b>Action:</b> {passport["action"]}</p>
-<p><b>Dynamics:</b> {passport["dynamics"]}</p><p><b>Failures:</b> {passport["failure_signal"]}</p>
+<h2>{passport_name}</h2><div class="card"><p>{passport_summary}</p>
+<p><b>Status:</b> {passport_status}; <b>Action:</b> {passport_action}</p>
+<p><b>Dynamics:</b> {passport_dynamics}</p><p><b>Failures:</b> {passport_failure}</p>
 <ul>{examples}</ul></div>
 <h2>Value vs cost — model check only</h2><div class="card">
 <p><b>{economics["label"]}</b></p>
@@ -194,7 +201,7 @@ business evidence.
 - Leakage check: `{'PASS' if evaluation['leakage']['passed'] else 'FAIL'}`.
 - Stability: `{summary['passport']['stability']['mean_jaccard']:.4f}` over
   `{summary['passport']['stability']['perturbation_runs']}` aligned runs.
-- Security fixture: `{'PASS' if security['passed'] else 'FAIL'}`; seeded secret
+- Security fixture: `{'PASS' if security.get('passed') else 'FAIL'}`; seeded secret
   absent: `{security['seeded_secret_absent']}`.
 - 100k suite: `{'PASS' if long_input.get('passed') else 'SKIPPED/FAIL'}`; p95
   `{long_input.get('p95_seconds', 'N/A')}` s; peak traced RAM
@@ -236,23 +243,33 @@ def run_pipeline(input_xlsx: str | Path, output_dir: str | Path, include_100k: b
     manual_analyses = [analysis_by_id[item.request_id] for item in manual]
 
     clusters = cluster_residuals(records, synthetic_analyses)
-    test_ids = {item.request_id for item in records if item.split == "test"}
-    sealed_cluster = max(
-        clusters,
-        key=lambda cluster: len({synthetic_analyses[index].request_id for index in cluster} & test_ids),
-        default=[],
-    )
-    stability = stability_report(records, synthetic_analyses, sealed_cluster)
-    passport = build_passport(records, synthetic_analyses, sealed_cluster, stability)
-    for index in sealed_cluster:
-        item = synthetic_analyses[index]
-        synthetic_analyses[index] = replace(
-            item,
-            scenario_id=str(passport["scenario_id"]),
-            scenario_status=str(passport["status"]),
-            membership_confidence=float(stability["mean_jaccard"]),
+    candidates = []
+    for cluster in clusters:
+        candidate_stability = stability_report(records, synthetic_analyses, cluster)
+        candidate_passport = build_passport(
+            records, synthetic_analyses, cluster, candidate_stability
         )
-        analysis_by_id[item.request_id] = synthetic_analyses[index]
+        candidates.append((cluster, candidate_passport))
+        for index in cluster:
+            item = synthetic_analyses[index]
+            synthetic_analyses[index] = replace(
+                item,
+                scenario_id=str(candidate_passport["scenario_id"]),
+                scenario_status=str(candidate_passport["status"]),
+                membership_confidence=float(candidate_stability["mean_jaccard"]),
+            )
+            analysis_by_id[item.request_id] = synthetic_analyses[index]
+    if not candidates:
+        raise RuntimeError("No residual cluster candidate was produced")
+    _, passport = max(
+        candidates,
+        key=lambda item: (
+            item[1]["status"] == "emerging",
+            float(item[1]["stability"]["mean_jaccard"]),
+            int(item[1]["support_canonical_groups"]),
+            float(item[1]["cohesion"]),
+        ),
+    )
     analyses = [analysis_by_id[item.request_id] for item in all_records]
 
     runs, steps = synthetic_run_fixture()
@@ -269,7 +286,15 @@ def run_pipeline(input_xlsx: str | Path, output_dir: str | Path, include_100k: b
             ],
         ),
         "manual": classification_metrics(manual, manual_analyses),
-        "grouping": grouping_metrics(records, [analysis_by_id[item.request_id] for item in records], passport),
+        "grouping": grouping_metrics(
+            records,
+            [analysis_by_id[item.request_id] for item in records],
+            [
+                [synthetic_analyses[index].request_id for index in cluster]
+                for cluster, candidate in candidates
+                if candidate["status"] == "emerging"
+            ],
+        ),
         "leakage": leak,
     }
     long_input = run_100k_suite() if include_100k else {"passed": None, "skipped": True}
@@ -345,11 +370,16 @@ def run_pipeline(input_xlsx: str | Path, output_dir: str | Path, include_100k: b
     persisted_files = [
         path
         for path in destination.iterdir()
-        if path.is_file() and path.name not in {"summary.json", "dashboard.html"}
+        if path.is_file()
     ]
+    prospective_artifacts = (
+        _canonical_json(summary).encode("utf-8"),
+        _render_html(summary).encode("utf-8"),
+        _render_evaluation_markdown(summary).encode("utf-8"),
+    )
     security["seeded_secret_absent"] = all(
         seeded_secret not in path.read_bytes() for path in persisted_files
-    )
+    ) and all(seeded_secret not in payload for payload in prospective_artifacts)
     security["passed"] = bool(
         security["fixture_redactions"] >= 3
         and security["fixture_injection_flag"]
@@ -379,6 +409,14 @@ def validate_summary(summary: dict[str, Any]) -> list[str]:
         failures.append("sealed-discovery")
     if summary["passport"]["stability"]["mean_jaccard"] < 0.8:
         failures.append("stability")
+    grouping = summary["evaluation"]["grouping"]
+    if (
+        grouping["sealed_bcubed_f1"] < 0.75
+        or grouping["novelty_precision"] < 0.70
+        or grouping["known_only_false_emerging"] != 0
+        or grouping["mixed_emerging_clusters"] != 0
+    ):
+        failures.append("grouping")
     if summary["long_input"].get("passed") is not True:
         failures.append("100k")
     if summary["manifest"]["external_network_calls"] != 0:

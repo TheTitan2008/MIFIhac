@@ -25,7 +25,13 @@ def redact(text: str) -> tuple[str, int, bool, str]:
     injection = bool(INJECTION_RE.search(cleaned))
     if injection:
         cleaned = INJECTION_RE.sub("[UNTRUSTED_INSTRUCTION]", cleaned)
-    status = "quarantine" if re.search(r"\bPERSON\s*:\s*\S+", cleaned, re.IGNORECASE) else "passed"
+    uncertain_person = re.search(
+        r"\b(?:PERSON|ФИО)\s*:\s*[A-ZА-ЯЁ][A-Za-zА-Яа-яЁё-]+"
+        r"(?:\s+[A-ZА-ЯЁ][A-Za-zА-Яа-яЁё-]+){1,2}",
+        cleaned,
+        re.IGNORECASE,
+    )
+    status = "quarantine" if uncertain_person else "passed"
     if status == "quarantine":
         cleaned = "[QUARANTINED]"
     return cleaned, count, injection, status

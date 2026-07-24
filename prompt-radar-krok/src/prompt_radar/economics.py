@@ -48,6 +48,18 @@ def synthetic_run_fixture() -> tuple[list[dict[str, object]], list[dict[str, obj
 def calculate_economics(
     runs: list[dict[str, object]], steps: list[dict[str, object]]
 ) -> dict[str, object]:
+    run_ids = [str(run["run_id"]) for run in runs]
+    if len(run_ids) != len(set(run_ids)):
+        raise ValueError("Duplicate run_id would double-count business value")
+    if any(run.get("run_id_validation") != "explicit" for run in runs):
+        raise ValueError("Economics requires explicit validated run_id")
+    step_ids = [str(step["step_id"]) for step in steps]
+    if len(step_ids) != len(set(step_ids)):
+        raise ValueError("Duplicate step_id would double-count child cost")
+    orphan_run_ids = {str(step["run_id"]) for step in steps} - set(run_ids)
+    if orphan_run_ids:
+        raise ValueError(f"Orphan child costs for run_id: {sorted(orphan_run_ids)}")
+
     step_cost: Counter[str] = Counter()
     for step in steps:
         step_cost[str(step["run_id"])] += float(step["cost"])
@@ -72,17 +84,71 @@ def calculate_economics(
             row = {
                 "run_id": run_id,
                 "gross_value": round(gross, 4),
+                "child_step_cost": round(step_cost[run_id], 4),
+                "human_touch_cost": round(human_touch, 4),
                 "marginal_cost": round(marginal, 4),
                 "fully_loaded_cost": round(fully_loaded, 4),
                 "net_value_marginal": round(gross - marginal, 4),
                 "net_value_fully_loaded": round(gross - fully_loaded, 4),
+                "raw_net_saved_minutes": round(baseline - touch_minutes, 4),
                 "realized_net_saved_minutes": round(
                     baseline * success * quality - touch_minutes, 4
                 ),
+                "roi_marginal": round((gross - marginal) / marginal, 4)
+                if marginal
+                else None,
+                "roi_fully_loaded": round((gross - fully_loaded) / fully_loaded, 4)
+                if fully_loaded
+                else None,
+                "value_cost_ratio_marginal": round(gross / marginal, 4)
+                if marginal
+                else None,
+                "value_cost_ratio_fully_loaded": round(gross / fully_loaded, 4)
+                if fully_loaded
+                else None,
             }
             rows.append(row)
-            totals.update({key: value for key, value in row.items() if key != "run_id"})
-        scenarios[scenario] = {"runs": rows, "totals": {k: round(v, 4) for k, v in totals.items()}}
+            totals.update(
+                {
+                    key: value
+                    for key, value in row.items()
+                    if key
+                    not in {
+                        "run_id",
+                        "roi_marginal",
+                        "roi_fully_loaded",
+                        "value_cost_ratio_marginal",
+                        "value_cost_ratio_fully_loaded",
+                    }
+                }
+            )
+        total_values = {key: round(value, 4) for key, value in totals.items()}
+        gross_total = total_values["gross_value"]
+        marginal_total = total_values["marginal_cost"]
+        fully_loaded_total = total_values["fully_loaded_cost"]
+        total_values.update(
+            {
+                "roi_marginal": round(
+                    total_values["net_value_marginal"] / marginal_total, 4
+                )
+                if marginal_total
+                else None,
+                "roi_fully_loaded": round(
+                    total_values["net_value_fully_loaded"] / fully_loaded_total, 4
+                )
+                if fully_loaded_total
+                else None,
+                "value_cost_ratio_marginal": round(gross_total / marginal_total, 4)
+                if marginal_total
+                else None,
+                "value_cost_ratio_fully_loaded": round(
+                    gross_total / fully_loaded_total, 4
+                )
+                if fully_loaded_total
+                else None,
+            }
+        )
+        scenarios[scenario] = {"runs": rows, "totals": total_values}
     reconciliation_error = round(
         sum(abs(float(run["child_cost"]) - step_cost[str(run["run_id"])]) for run in runs),
         8,
@@ -90,7 +156,7 @@ def calculate_economics(
     return {
         "label": "SYNTHETIC MODEL CHECK / NOT BUSINESS EVIDENCE",
         "evidence_level": "E0 EXPERT ESTIMATE",
-        "business_task_count": len({str(run["run_id"]) for run in runs}),
+        "business_task_count": len(run_ids),
         "status_denominator": len(runs),
         "status_counts": dict(Counter(str(run["run_status"]) for run in runs)),
         "gross_value_count": sum(1 for run in runs if float(run["success_weight"]) > 0),
