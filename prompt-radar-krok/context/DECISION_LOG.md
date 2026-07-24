@@ -5,14 +5,17 @@
 
 ## Статус
 
-- Этап: стратегия обновлена по интервью, ожидается red-team
-- Gate 1: **PASS WITH CONDITIONS**
+- Этап: независимый red-team завершён, реализация ещё не начиналась
+- Gate 1: **GO** только для одного hackathon vertical slice
 - Архитектура: Evidence-First Opportunity Radar с run-level unit economics
-  утверждена для red-team
-- Главная демонстрационная история: рождение нового сценария
-  «Email → Project ticket», паспорт доказательств и экран value/cost
+  сохранена после точечных исправлений red-team
+- Главная демонстрационная история: sealed synthetic challenge
+  «Email → Project ticket», паспорт доказательств и экран value/cost; это не
+  заявление об открытии неизвестного КРОК сценария
 - Стек: CPU-first локальный Python pipeline, multilingual embeddings,
   DuckDB/Parquet и Streamlit; LLM не входит в критический путь
+- Ограничение вердикта: Gate не подтверждает ROI КРОК, production readiness
+  или causal superiority agent platform над web chat
 
 ## Принятые решения
 
@@ -45,9 +48,10 @@
 10. Требование 100k трактуется как нагрузочный профиль. Длинный запрос
     обрабатывается через structure-aware chunking и semantic sketch не более
     чем из 24 репрезентативных чанков с `coverage_warning`.
-11. Главная demo-история: на явно синтетическом потоке система обнаруживает
-    ранее не заведённый use case «создание тикетов Project из входящих писем»,
-    доказывает его устойчивость и предлагает исследовать автоматизацию.
+11. Главная demo-история: на явно синтетическом sealed test система проверяет
+    use case «создание тикетов Project из входящих писем». Тема уже дана в
+    `Лист1!A32`; она исключается из dev/catalog/tuning, а результат доказывает
+    работу pipeline на challenge, но не открытие в реальных логах КРОК.
 12. Полное обоснование и план зафиксированы в `docs/STRATEGY.md`.
 13. Единица business volume, success и economics для agent platform -
     законченный `agent_run`, а не запрос, токен, LLM-вызов или tool call.
@@ -61,9 +65,10 @@
 17. Expert baseline отделён от causal effect уровнями `E0-E3`. Для `E0/E1`
     обязательны low/base/high assumptions; 95% CI используется после
     paired/control измерения.
-18. Web chat и agent platform сравниваются только по matched completed jobs
-    одного use case и quality threshold. Числа пользователей и токенов остаются
-    контекстом масштаба.
+18. Web chat и agent platform сравниваются в primary analysis только по
+    pre-outcome matched started/assigned jobs одного use case и сопоставимой
+    сложности. Completion и quality - outcomes; per-completed-job является
+    вторичной метрикой. Числа пользователей и токенов остаются контекстом.
 19. Главный экономический экран - «ценность против стоимости»: cost per
     successful run, realized net value, evidence level и sensitivity.
     Рекомендация `SCALE` требует положительного conservative net value.
@@ -73,6 +78,30 @@
 21. Путь валидации: instrumentation -> time study -> paired crossover tasks ->
     контрольный или stepped-wedge pilot. Expert estimate нельзя переименовать в
     доказанный ROI без этого перехода.
+22. Split назначается по `canonical_group_id/source_topic_id/template_family_id`
+    до augmentation. Near-duplicates между dev/test запрещены; test открывается
+    после freeze taxonomy, model, prompts, thresholds и generator version.
+23. Synthetic evaluation не может самостоятельно пройти Gate: отдельно нужен
+    независимо сформулированный hand-labeled challenge set. Synthetic economics
+    проверяет формулы и reconciliation, а не бизнес-эффект.
+24. Stability считается минимум на 10 perturbation runs с sampling по
+    canonical groups и alignment кластеров до Jaccard. Вместе публикуются
+    support, coverage, unresolved rate и known-only false discovery.
+25. Quoting входного текста не считается защитой от prompt injection.
+    Redaction выполняется до embeddings/cache/dashboard; optional naming-LLM
+    не имеет tools, network и raw-store access; сомнительные записи
+    quarantined.
+26. 100k smoke/stress path перенесён в P0 как буквальное требование кейса.
+    Needle start/middle/end и injection обязательны; при слабом coverage
+    система abstains, а не выдаёт уверенную классификацию.
+27. `TRAIN_USERS` нельзя рекомендовать только по low confidence: нужна
+    наблюдаемая связь формулировки с outcome. `SCALE/AUTOMATE` запрещён на `E0`.
+28. MVP economics считается только по явным или однозначно валидированным
+    `run_id`; неоднозначная reconstruction приводит к `N/A/quarantine`.
+29. Hackathon scope ограничен одним offline CPU batch flow, одним dashboard,
+    одним evidence passport, одним reconciled synthetic economics card, одним
+    100k smoke test и одним evaluation report. GPU, external API, local LLM,
+    causal pilot, real-time и MLOps не блокируют demo.
 
 ## Отклонённые варианты
 
@@ -90,7 +119,8 @@
 6. **Запрос, токен или внутренний LLM-вызов как единица пользы** - создаёт
    двойной счёт и вознаграждает дорогие циклы.
 7. **Прямое сравнение 1300 web-chat и 150 agent users** - продукты решают
-   задачи разной сложности; сравнение допустимо только по matched jobs.
+   задачи разной сложности; primary comparison допустим только по
+   pre-outcome matched started/assigned jobs.
 8. **Expert minutes как доказанная экономия** - остаются proxy assumption
    `E0`, а не causal effect.
 9. **Одна точка денежного ROI без диапазона и cost mode** - скрывает baseline,
@@ -113,32 +143,26 @@
 
 ## Следующий обязательный gate
 
-Провести red-team выбранной архитектуры до начала основной реализации.
+Следующий этап - P0 implementation gate. Реализация ещё не начиналась.
 
-Gate пройден только если:
+P0 пройден только если:
 
-1. reconstruction даёт одну business task и не более одной записи gross value
-   на `run_id`, независимо от числа внутренних вызовов;
-2. сумма child costs сверяется с run cost, а failure/partial runs остаются в
+1. classification/abstain, known matching, grounded extractive summary и один
+   dashboard проходят end-to-end на зафиксированном contract;
+2. split назначен до augmentation, A32 отсутствует в dev/catalog/tuning, а
+   leakage report не находит cross-split duplicates;
+3. synthetic и independently hand-labeled метрики опубликованы раздельно
+   вместе с coverage;
+4. reconstruction даёт одну business task и не более одной gross value на
+   валидированный `run_id`; child costs сходятся, failures остаются в
    denominator;
-3. low/base/high и marginal/fully-loaded режимы меняют action card прозрачно и
-   не содержат скрытых hardcodes;
-4. dashboard визуально и семантически различает `EXPERT ESTIMATE`,
-   `MEASURED ASSOCIATION` и `CAUSAL ESTIMATE`;
-5. сравнение web chat / agent platform использует только matched completed jobs
-   и показывает coverage;
-6. residual discovery не создаёт новый сценарий из дублей или перефразировок
-   известного use case;
-7. passport объясняет membership и action card через метрики и примеры, а не
-   через доверие к summary;
-8. held-out сценарий `Email → Project ticket` устойчиво обнаруживается на
-   повторных прогонах и не склеивается с общим управлением задачами;
-9. CPU-only 100k stress profile укладывается в измеримый приемлемый latency/RAM
-   budget либо порождает честный `coverage_warning`;
-10. отсутствие timestamp, response, error, run, cost или baseline приводит к
-    `N/A`, а не к синтетическим выводам;
-11. default demo полностью проходит без сети и H100.
+5. adversarial fixture не раскрывает seeded PII/secrets и не меняет pipeline
+   под инструкцией из входного текста;
+6. CPU-only 100k smoke с needle start/middle/end не падает и либо сохраняет
+   intent, либо честно abstains с `coverage_warning`;
+7. dashboard различает `SYNTHETIC`, `E0`, `E1`, `E2/E3` и `N/A`;
+8. default demo полностью проходит без сети, H100 и naming-LLM.
 
-Результат red-team gate: сохранить архитектуру или точечно изменить
-thresholds, run reconstruction, economic assumptions/evidence gate. Расширять
-scope новыми крупными подсистемами до прохождения gate нельзя.
+Полная окончательная спецификация Gate 1 и вопросы жюри находятся в
+`docs/RED_TEAM.md`. Расширять scope новыми крупными подсистемами до прохождения
+P0 нельзя.

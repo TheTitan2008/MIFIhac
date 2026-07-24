@@ -171,14 +171,21 @@ case в завершённую работу, экономию времени и 
 
 ## 5. Главная демонстрационная история
 
-На основе одной из предоставленных тем создаётся **явно синтетический** новый
-поток запросов: «создание тикетов Project из входящих писем». Оси `Email`,
-`Project`, `create`, `task` уже известны, но самого use case нет в каталоге
-известных сценариев. Radar не приписывает эти запросы к обычному «управлению
-задачами», а формирует устойчивый residual-кластер и показывает его паспорт.
-Затем несколько внутренних LLM/tool events сворачиваются в один synthetic
-`agent run`, и CTO видит не «ценность токенов», а стоимость завершённой задачи,
-ручную проверку, rework и диапазон net value.
+На основе строки `Лист1!A32` создаётся **явно синтетический sealed challenge**:
+«создание тикетов Project из входящих писем». Этот use case уже раскрыт в
+материалах организатора, поэтому демо не называется открытием неизвестного
+паттерна в данных КРОК. Оно проверяет, способен ли зафиксированный заранее
+pipeline найти сценарий, исключённый из dev-набора и каталога известных
+сценариев. `source_topic_id=A32` и его перефразировки не используются для
+настройки taxonomy, prompts, thresholds и known prototypes; split manifest и
+fingerprint конфигурации фиксируются до test run.
+
+Radar не приписывает sealed запросы к обычному «управлению задачами», а
+формирует устойчивый residual-кластер и показывает его паспорт. Затем несколько
+внутренних LLM/tool events сворачиваются в один synthetic `agent run`, и CTO
+видит не «ценность токенов», а проверку cost reconciliation, ручную проверку,
+rework и диапазон estimated net value. Эта карточка проверяет экономическую
+математику, но не доказывает реальный ROI КРОК.
 
 Это сильная история, потому что она одновременно демонстрирует:
 
@@ -224,12 +231,20 @@ CSV / JSONL / Parquet / demo generator
 
 #### B. Безопасная предобработка
 
-- Маскирование email, телефонов, идентификаторов и имён до эмбеддингов.
+- Raw text хранится отдельно с ограниченным доступом и не нужен default demo.
+- Маскирование email, телефонов, идентификаторов, имён и seeded secrets
+  выполняется до эмбеддингов, cache, clustering examples и dashboard.
 - Нормализация пробелов и повторов без переписывания смысла.
 - Exact/near-duplicate detection, чтобы копии одного запроса не создавали
   искусственный «новый сценарий».
 - Текст лога всегда считается недоверенными данными: инструкции из него не
-  исполняются, а при LLM-наименовании передаются только как quoted evidence.
+  исполняются и не могут менять system/configuration.
+- Quoting не считается security boundary. Optional naming-LLM работает без
+  tools, network и доступа к raw store, получает только ограниченный redacted
+  fact pack и возвращает данные по JSON Schema/allowlist.
+- При неуспешной или сомнительной redaction запись получает
+  `redaction_status=quarantine` и не попадает в embeddings, примеры или
+  naming.
 
 #### C. Long-input sketch
 
@@ -265,18 +280,26 @@ chunks. Если confidence ниже порога, ставится `abstain`, �
 3. Низкоуверенные запросы попадают в residual pool.
 4. Residual pool делится хотя бы по крупному `business_domain/system`, чтобы
    лексически похожие, но бизнес-разные запросы не склеивались.
-5. Кластер-кандидат проходит несколько bootstrap/seed прогонов.
+5. Кластер-кандидат проходит не менее 10 заранее заданных perturbation runs.
+   Sampling unit - `canonical_group_id`, а не строка; после каждого прогона
+   кластеры выравниваются по maximum overlap до расчёта Jaccard.
 6. Он становится `emerging` только при выполнении всех условий:
    достаточная поддержка, внутренняя связность, отличие от известных
-   прототипов и устойчивое ядро.
+   прототипов, устойчивое ядро и отсутствие ложного emerging на known-only
+   negative control.
 7. Всё остальное остаётся `unresolved`; это нормальный и видимый исход.
+   Вместе со stability всегда публикуются candidate coverage и unresolved rate,
+   чтобы abstention нельзя было использовать для искусственного улучшения
+   качества.
 
 #### F. Именование и саммари
 
 - Default: воспроизводимое extractive name из осей, ключевых фраз и medoid.
 - Optional: локальная небольшая instruct-модель получает только redacted
-  medoid-примеры и возвращает строгое JSON-имя/саммари.
+  bounded fact pack и возвращает строгое JSON-имя/саммари.
 - Название LLM не влияет на membership кластера.
+- LLM не может добавлять системы, цели, боли или выгоды, отсутствующие в fact
+  pack; unsupported entity отклоняет результат и включает extractive fallback.
 - Любое имя можно раскрыть до типовых и граничных примеров.
 
 #### G. Evidence passport
@@ -297,14 +320,16 @@ chunks. Если confidence ниже порога, ставится `abstain`, �
 
 Рекомендации формируются прозрачными правилами, а не свободным текстом LLM:
 
-- `SCALE / AUTOMATE`: устойчивый повторяющийся сценарий, достаточный объём, высокая
-  успешность, низкая вариативность шагов и положительный conservative net value;
+- `SCALE / AUTOMATE`: устойчивый повторяющийся сценарий, достаточный объём,
+  высокая успешность, низкая вариативность шагов, положительный conservative
+  net value и evidence level не ниже `E2`;
 - `OPTIMIZE_COST`: ценность положительна, но model/tool cost, retry или loops
   оставляют измеримый потенциал оптимизации;
 - `IMPROVE_AGENT`: есть подтверждённая доля технических ошибок или негативный
   feedback, rework либо дорогие retry/loop-паттерны на устойчивом сценарии;
-- `TRAIN_USERS`: много низкоуверенных/повторных формулировок при работающем
-  агенте;
+- `TRAIN_USERS`: есть наблюдаемое улучшение success/quality после
+  переформулировки либо явная обратная связь о непонятной инструкции; одна
+  низкая confidence классификатора недостаточна;
 - `VALIDATE`: base-case положителен, но evidence level или low-case не
   позволяет утверждать эффект;
 - `INVESTIGATE`: новый или неоднозначный кластер без достаточного evidence;
@@ -366,6 +391,8 @@ LLM-вызовы и tool calls являются дочерними событи�
 | `feedback` | нет | Явная оценка пользователя |
 | `synthetic_flag` | да | Защита от смешения синтетики и фактов |
 | `source_topic_id` | нет | Связь с одной из 31 исходных тем |
+| `canonical_group_id`, `template_family_id` | да для evaluation | Split до augmentation и контроль leakage |
+| `split` | да для evaluation | `dev / test / manual / real`; test sealed |
 | `dataset_version` | да | Воспроизводимость |
 
 ### 7.2. `request_analysis`
@@ -381,13 +408,15 @@ LLM-вызовы и tool calls являются дочерними событи�
 | `embedding_model_version` | Версия представления |
 | `long_input_mode` | Обычный / hierarchical sketch |
 | `pii_redaction_count` | Контроль предобработки |
+| `redaction_status` | `passed / quarantine`; quarantine не анализируется |
+| `prompt_injection_flag` | Диагностика недоверенного текста, не инструкция |
 | `quality_risk` | Риск непонимания, не «поломка» |
 
 ### 7.3. `scenario` и `scenario_membership`
 
 `scenario` хранит `scenario_id`, имя, summary, статус, родительские оси,
 support, cohesion, distinctness, stability, discovery_window, naming_method,
-версию алгоритма и список evidence IDs.
+candidate coverage, unresolved rate, версию алгоритма и список evidence IDs.
 
 `scenario_membership` хранит `request_id`, `scenario_id`,
 `membership_confidence`, `is_medoid`, `is_boundary` и `cluster_run_id`.
@@ -407,7 +436,8 @@ evidence IDs, confidence, ограничения данных и `synthetic_flag
 
 | Поле | Смысл |
 |---|---|
-| `run_id` | Одна пользовательская цель / completed job |
+| `run_id` | Одна пользовательская цель / attempted job |
+| `run_id_validation` | Явный ID или confidence реконструкции; ambiguity -> N/A |
 | `job_id` | Общий идентификатор сопоставимой задачи между продуктами |
 | `product_surface` | `web_chat` или `agent_platform` |
 | `user_id_hash`, `department`, `agent_id` | Организационный контекст |
@@ -557,18 +587,23 @@ review. Ни одно число генератора не становится 
 
 ### 7.11. Сравнение web chat и agent platform
 
-Сравниваются только сопоставимые `job_id/use_case` и одинаковый quality
-threshold. Для web chat сообщения объединяются в одну сессию-задачу; для
-agent platform все внутренние события объединяются в `run_id`.
+Primary cohort формируется по сопоставимым eligible/assigned
+`job_id/use_case`, сложности, роли и периоду **до** наблюдения результата.
+Completion и достижение одинакового quality threshold являются outcomes, а не
+условиями включения: фильтр только по completed/quality-validated jobs создал бы
+post-treatment selection и survivorship bias. Для web chat сообщения
+объединяются в одну attempted session-task; для agent platform все внутренние
+события объединяются в `run_id`.
 
 Срезы сравнения:
 
-- completed и quality-validated jobs;
+- started/assigned, completed и quality-validated jobs;
 - completion и first-pass yield;
-- net saved minutes на completed job;
-- marginal/fully-loaded cost на completed job;
+- net saved minutes на started/assigned job;
+- marginal/fully-loaded cost на started/assigned job;
 - cost per successful job;
-- net value и value/cost ratio на 100 сопоставимых задач;
+- net value и value/cost ratio на 100 сопоставимых started/assigned задач;
+- per-completed-job только как вторичная операционная метрика;
 - coverage - доля задач, для которых сравнение вообще корректно.
 
 Числа 1300 и 150 пользователей и расход токенов показываются только как
@@ -582,7 +617,7 @@ calls.
 
 Главный executive screen поверх сценариев:
 
-- KPI cards: completed runs, validated success, gross value, marginal и
+- KPI cards: started и completed runs, validated success, gross value, marginal и
   fully-loaded cost, net value, ROI range и FTE capacity equivalent;
 - bubble chart по use cases: X - cost per successful run, Y - realized net value
   per run, размер - completed runs, цвет - evidence level `E0-E3`;
@@ -606,8 +641,8 @@ latency/rework. Если base-case положителен, но low-case отр�
 
 ### 0:35-1:10 - executive radar
 
-Показать топ известных сценариев и один новый кандидат. Не задерживаться на
-общем дашборде; сразу открыть карточку
+Показать топ известных сценариев и один sealed synthetic candidate. Не
+задерживаться на общем дашборде; сразу открыть карточку
 «Создание тикетов Project из входящих писем».
 
 ### 1:10-2:05 - паспорт нового сценария
@@ -618,9 +653,12 @@ latency/rework. Если base-case положителен, но low-case отр�
 - поддержку, cohesion, distinctness и stability;
 - три непохожие формулировки, которые всё равно попали вместе;
 - ближайший известный сценарий и объяснение, почему кластер отделён;
-- статус `emerging`, а не безусловный «истинный класс».
+- статус `emerging`, а не безусловный «истинный класс»;
+- manifest, подтверждающий, что `Лист1!A32` не участвовал в dev/catalog/tuning,
+  и бейдж `SYNTHETIC SEALED CHALLENGE`.
 
-Это центральный вау-момент.
+Это центральный вау-момент и проверка pipeline, а не заявление, что команда
+сама открыла неизвестный организаторам или КРОК use case.
 
 ### 2:05-3:20 - ценность против стоимости
 
@@ -633,9 +671,10 @@ latency/rework. Если base-case положителен, но low-case отр�
 - review/rework и realized net saved minutes;
 - marginal и fully-loaded net value/ROI range.
 
-Переключить base на low. Action card меняется с `AUTOMATE` на `VALIDATE`, если
-консервативный сценарий не подтверждает положительную ценность. Это не
-демонстрация реального ROI КРОК, а демонстрация корректной экономической модели.
+Переключить base на low и показать изменение диапазона. При `E0` action card
+остаётся `VALIDATE`/`OPTIMIZE COST` и никогда не становится `AUTOMATE` или
+`SCALE`, даже если base-case положителен. Это не демонстрация реального ROI
+КРОК, а демонстрация корректной экономической модели.
 
 ### 3:20-4:10 - честность про данные
 
@@ -661,10 +700,17 @@ telemetry явно помечены, а expert baseline не назван causal
 Все результаты публикуются раздельно для:
 
 1. hand-labeled challenge set;
-2. held-out synthetic set;
+2. sealed synthetic set;
 3. реальных логов, если они будут предоставлены.
 
 Синтетические показатели никогда не смешиваются с реальными.
+
+Split назначается по `canonical_group_id/source_topic_id/template_family_id`
+до генерации перефразировок. Exact и semantic near-duplicates между dev/test
+запрещены; embeddings и cache строятся после split. Test открывается только
+после freeze taxonomy, model, prompts, thresholds и generator version.
+`Лист1!A32` целиком относится к sealed test и не используется для настройки.
+Другой random seed того же template не считается независимым holdout.
 
 ### 9.1. Классификация
 
@@ -675,9 +721,11 @@ telemetry явно помечены, а expert baseline не назван causal
 - Expected Calibration Error или reliability bins;
 - отдельный score на cross-system и long-input поднаборах.
 
-Предварительный gate: macro-F1 не ниже 0.80 на held-out synthetic, ни одна
-ключевая ось не ниже 0.70; показатели подтверждаются отдельно на небольшой
-ручной challenge-выборке. Это целевой gate, не достигнутый результат.
+Предварительный gate: macro-F1 не ниже 0.80 на sealed synthetic, ни одна
+ключевая ось не ниже 0.70 на независимо сформулированной ручной
+challenge-выборке. F1 всегда публикуется вместе с coverage-risk curve;
+тривиальный coverage за счёт массового abstain Gate не проходит. Это целевой
+gate, не достигнутый результат.
 
 ### 9.2. Группировка
 
@@ -686,6 +734,7 @@ telemetry явно помечены, а expert baseline не назван causal
 - Adjusted Rand Index против ручной разметки;
 - cluster purity без использования purity как единственной метрики;
 - доля `unresolved`, чтобы качество не улучшалось скрытым отбрасыванием.
+- false emerging rate на known-only negative control.
 
 Предварительный gate: B-cubed F1 не ниже 0.75 и отсутствие очевидного
 cross-domain merge на ручной проверке.
@@ -694,13 +743,17 @@ cross-domain merge на ручной проверке.
 
 - precision/recall/F1 для `known vs novel`;
 - precision@k кандидатов, показанных CTO;
-- stability ядра: Jaccard membership по bootstrap-прогонам;
+- stability ядра: Jaccard membership после alignment кластеров по
+  perturbation-прогонам на `canonical_group_id`;
 - distinctness от ближайшего известного прототипа;
-- minimum support и доля шума.
+- minimum support из нескольких canonical groups, candidate coverage,
+  unresolved rate и доля шума.
 
-Предварительный gate: precision новых сценариев не ниже 0.70, stability ядра не
-ниже 0.80; recall вторичен, потому что ложная «новая возможность» опаснее
-пропущенного слабого сигнала.
+Предварительный gate: precision новых сценариев не ниже 0.70, не менее 10
+заранее заданных perturbation runs, stability ядра не ниже 0.80 и отсутствие
+ложного emerging на known-only контроле. Recall вторичен, но candidate coverage
+и unresolved rate обязательны, чтобы precision нельзя было повысить показом
+одного тривиального кандидата.
 
 ### 9.4. Интерпретируемость и продуктовость
 
@@ -721,12 +774,18 @@ cross-domain merge на ручной проверке.
 - идентичность классификации при повторном запуске;
 - ARI/Jaccard между фиксированными повторными cluster runs;
 - доля запросов с `coverage_warning`;
+- adversarial long-input результаты: intent в начале/середине/конце,
+  injection и noisy context;
+- ноль seeded PII/secrets в embeddings/cache/examples/logs на security fixture;
+- ноль изменений pipeline/config под инструкциями из входного текста;
 - число внешних сетевых вызовов в default demo: **0**.
 
 Предварительный gate: p95 до 2 секунд для обычного запроса и до 8 секунд для
-100k-token sketch на контрольной CPU-машине; одинаковый run fingerprint при
-повторном запуске с неизменными версиями. Значения должны быть измерены, а не
-заявлены заранее как факт.
+100k-token sketch на явно указанной контрольной CPU/RAM-машине; нет crash/OOM;
+canonical intent сохраняется на needle tests либо система честно abstains с
+`coverage_warning`. Одинаковый run fingerprint требуется при повторном запуске
+с неизменными версиями. Значения должны быть измерены, а не заявлены заранее
+как факт.
 
 ### 9.6. Успешность agent run
 
@@ -767,18 +826,21 @@ net value положителен, нижняя граница value/cost ratio �
 
 - строгий data contract и provenance;
 - генератор synthetic logs из 31 темы с явной маркировкой;
-- PII masking и защита от инструкций внутри логов;
+- sealed split по canonical group до augmentation и leakage report;
+- PII masking, quarantine и adversarial injection/security fixture;
 - multi-axis классификация с confidence и abstention;
 - известный use-case matching;
 - residual clustering с novelty/stability gate;
-- passport одного нового сценария с evidence;
+- passport одного sealed synthetic emerging-сценария с evidence;
 - понятные названия, summary и примеры;
 - action cards на прозрачных правилах;
 - reconstruction событий в один `agent_run` без двойного счёта LLM/tool calls;
 - run success, validation, review/rework и cost ledger;
 - baseline assumptions с `E0-E3` и low/base/high;
 - gross value, marginal/fully-loaded cost, net value и ROI range;
-- экран «ценность против стоимости» и сравнение продуктов по completed jobs;
+- экран «ценность против стоимости»; сравнение продуктов, если показано,
+  использует matched started/assigned jobs;
+- обязательный CPU 100k smoke/stress profile;
 - корректное `N/A` для недоступной динамики и failure metrics;
 - корректное `N/A` для отсутствующих run/cost/baseline данных;
 - offline CPU-only demo;
@@ -797,7 +859,8 @@ net value положителен, нижняя граница value/cost ratio �
 - не обещаем real-time streaming: batch refresh достаточно для защиты;
 - не выдаём expert baseline и synthetic economics за измеренный causal effect;
 - не показываем денежный ROI без assumptions, диапазона и cost mode;
-- не сравниваем 1300 web-chat и 150 agent users без matched completed jobs;
+- не сравниваем 1300 web-chat и 150 agent users без pre-outcome matched
+  started/assigned jobs;
 - не называем низкую уверенность классификатора «поломкой агента»;
 - не показываем синтетическую динамику как данные КРОК;
 - не строим сложный редактор таксономии и полноценную MLOps-платформу;
@@ -807,43 +870,53 @@ net value положителен, нижняя граница value/cost ratio �
 
 ### P0 - доказуемый вертикальный срез
 
-1. Зафиксировать schema, taxonomy v1 и правила synthetic provenance.
+1. Зафиксировать schema, taxonomy v1, canonical groups, sealed split и правила
+   synthetic provenance.
 2. Зафиксировать `agent_run -> events/steps/cost ledger` и правила дедупликации
    внутренних вызовов.
-3. Создать hand-labeled challenge set и synthetic generator из 31 темы с
-   согласованными tool calls, failures, costs, review/rework и baseline ranges.
+3. Создать независимо сформулированный hand-labeled challenge set и synthetic
+   generator из dev-тем с согласованными tool calls, failures, costs,
+   review/rework и baseline ranges.
 4. Сделать CPU baseline multi-axis классификации с abstention.
 5. Реализовать known use-case matching и метрики классификации.
-6. Собрать один executive экран и drill-down до запросов/runs.
+6. Реализовать redaction/quarantine и adversarial PII/injection fixture.
+7. Добавить минимальный 100k smoke path: needle start/middle/end, injection,
+   отсутствие crash/OOM и честный abstain при недостаточном coverage.
+8. Собрать один executive экран и drill-down до запросов/runs.
 
 **Gate P0:** одна цель проходит путь от ingestion до объяснимой карточки и
 одного reconciled `agent_run`; внутренние вызовы не удваивают business volume
-или gross value.
+или gross value; sealed split не содержит leakage; default demo не раскрывает
+seeded PII и не меняет поведение под инструкцией из входного текста; 100k smoke
+не падает.
 
 ### P1 - победная фича
 
 1. Выделить residual pool.
 2. Добавить constrained clustering и повторные stability runs.
 3. Реализовать паспорт сценария.
-4. Настроить held-out сценарий «Email → Project ticket» для честной проверки
-   novelty detection.
+4. До открытия теста заморозить конфигурацию и прогнать sealed synthetic
+   challenge «Email → Project ticket» (`Лист1!A32` не участвует в
+   dev/catalog/tuning).
 5. Добавить value/cost passport и rule-based action card с sensitivity.
 
-**Gate P1:** новый сценарий проходит evidence gate и воспроизводится при
-повторном запуске; соседние известные сценарии не склеиваются; base/low
-assumptions способны изменить рекомендацию без изменения исходных событий.
+**Gate P1:** sealed synthetic scenario проходит evidence gate минимум на 10
+aligned perturbation runs; соседние известные сценарии не склеиваются;
+known-only control не порождает ложный emerging; base/low assumptions способны
+изменить диапазон и допустимую рекомендацию без изменения исходных событий.
 
 ### P2 - спорные требования и доверие
 
-1. Реализовать long-input sketch и отдельный benchmark 100k.
+1. Расширить P0 100k smoke до отдельного benchmark latency/RAM и coverage.
 2. Развести confirmed failure, probable failure и quality risk.
 3. Реализовать динамику с data-availability gate.
-4. Добавить экран сравнения web chat / agent platform только по matched jobs.
-5. Добавить CPU/GPU profiles с одинаковой семантикой результата.
-6. Зафиксировать run fingerprint и offline demo cache.
+4. Если хватает времени, добавить экран сравнения web chat / agent platform
+   только по pre-outcome matched started/assigned jobs.
+5. Зафиксировать run fingerprint и offline demo cache.
 
 **Gate P2:** демо не ломается без сети и H100; при отсутствии telemetry честно
-показывает `N/A`; expert economics везде подписана как estimate.
+показывает `N/A`; expert economics везде подписана как estimate. GPU profile и
+product-comparison screen не являются условиями готовности основного demo.
 
 ### P3 - только если P0-P2 зелёные
 
@@ -872,8 +945,11 @@ assumptions способны изменить рекомендацию без и
 5. агрегировать chunk embeddings по осям через top-k evidence, а не усреднять
    весь 100k-текст в один вектор;
 6. сохранить coverage metadata; при слабом покрытии поставить
-   `coverage_warning`, а не завышенную уверенность;
-7. отдельно измерить latency/RAM на синтетическом 100k stress set.
+   `coverage_warning` и `abstain`, а не уверенную классификацию;
+7. проверить intent needle в начале, середине и конце, противоречивые
+   instruction-like фрагменты, injection и повторяющийся шум;
+8. отдельно измерить latency/RAM на синтетическом 100k stress set с
+   зафиксированными tokenizer, CPU/RAM и truncation policy.
 
 Полный 100k-текст не отправляется во внешнюю LLM и не хранится в prompt
 именования кластера.
@@ -929,6 +1005,11 @@ assumptions способны изменить рекомендацию без и
 только при новой пользовательской цели или явно начатом повторном выполнении;
 для повторов сохраняется `parent_run_id`.
 
+Если `run_id` отсутствует, переиспользован или граница цели неоднозначна,
+reconstruction сохраняет confidence и переводит запись в quarantine для
+economics. В MVP gross value и ROI считаются только для явных либо однозначно
+валидированных `run_id`; сомнительные события не склеиваются ради полноты.
+
 Классификация request/step наследуется и агрегируется в use case, но:
 
 ```text
@@ -972,9 +1053,11 @@ success/quality, review/rework и fixed-cost allocation. Для измеренн
 - **Не оправдан:** даже high-case отрицателен, completion/quality низки или
   токены тратятся преимущественно в failed/retry loops.
 
-Web chat и agent platform сравниваются на 100 matched completed jobs одного use
-case и quality threshold. Users, messages и tokens остаются контекстом, а не
-знаменателем пользы.
+Web chat и agent platform сравниваются на 100 pre-outcome matched
+started/assigned jobs одного use case и сопоставимой сложности. Completion и
+достижение quality threshold являются outcomes; per-completed-job остаётся
+вторичной операционной метрикой. Users, messages и tokens остаются контекстом,
+а не знаменателем пользы.
 
 ### 13.8. План дальнейшей валидации
 
@@ -997,35 +1080,48 @@ case и quality threshold. Users, messages и tokens остаются конте
 6. **Обновление assumptions.** `E0` заменяется `E1/E2/E3` только после
    документированной проверки; версии baseline и price book сохраняются.
 
-## 14. Gate 1: архитектурный вердикт
+## 14. Gate 1: окончательный вердикт после red-team
 
-**Вердикт: PASS WITH CONDITIONS.**
+**Вердикт: GO для реализации одного hackathon vertical slice.**
 
-Выбранная Evidence-First Opportunity Radar сохраняется. Интервью не требует
-новой стратегии: run-level unit economics является узким управленческим слоем
-поверх обязательных classification/discovery и использует тот же use case
-passport. Стратегия допускается к red-team, но не к заявлению доказанного ROI.
+Выбранная Evidence-First Opportunity Radar сохраняется без расширения scope.
+Run-level unit economics остаётся узким слоем поверх обязательных
+classification/discovery. Gate не подтверждает экономический эффект КРОК, не
+разрешает production deployment и не допускает causal/ROI claim на synthetic
+или `E0`.
 
-До начала основной реализации red-team должен попытаться опровергнуть
-следующие утверждения:
+Реализация начинается только в следующем этапе и должна удовлетворить
+следующей спецификации:
 
-1. reconstruction гарантирует одну бизнес-задачу и одну запись gross value на
-   `run_id`, независимо от числа LLM/tool calls;
-2. failure/partial runs не исчезают из denominator и способны сделать net value
-   отрицательным;
-3. low/base/high assumptions и marginal/fully-loaded cost меняют вывод
-   прозрачно, без скрытых hardcodes;
-4. web chat и agent platform сравниваются только по matched completed jobs с
-   одинаковым quality threshold;
-5. labels `EXPERT ESTIMATE` и `CAUSAL ESTIMATE` невозможно перепутать в
-   dashboard/demo;
-6. residual discovery не создаёт «новый сценарий» из дублей или формулировок
-   одного известного use case;
-7. passport объясняет membership и рекомендацию без
-   доверия к красивому summary;
-8. 100k CPU-profile и отсутствие timestamp/run/cost/baseline telemetry не
-   ломают demo flow и дают честное `N/A`.
+1. **Literal coverage:** classification/abstain, known/emerging/unresolved
+   grouping, grounded summary и один понятный report/dashboard работают
+   end-to-end.
+2. **Sealed evaluation:** split выполняется по canonical group до augmentation;
+   `Лист1!A32` отсутствует в dev/catalog/tuning; leakage report равен нулю.
+3. **Classification:** synthetic и independently hand-labeled metrics
+   раздельны; macro-F1 публикуется вместе с coverage-risk curve.
+4. **Novelty:** B-cubed F1, novelty precision, unresolved rate и known-only
+   false discovery показаны; A32 подписан как `SYNTHETIC SEALED CHALLENGE`.
+5. **Stability:** не менее 10 aligned perturbation runs на canonical groups;
+   core Jaccard не ниже 0.80 вместе с support и coverage.
+6. **Grounding:** default summary extractive; LLM не влияет на
+   membership/action; `TRAIN_USERS` не следует только из low confidence.
+7. **Security:** redaction до embeddings/cache/dashboard; quarantine при
+   сомнении; optional LLM без tools/network/raw access; adversarial PII и
+   injection fixture не даёт утечек и не меняет pipeline.
+8. **100k:** P0 smoke включает needle start/middle/end, injection и noisy
+   context; нет crash/OOM; при слабом coverage система abstains.
+9. **Run economics:** одна business task и не более одной gross value на
+   validated `run_id`; child costs сходятся; все started statuses остаются в
+   denominator; E0 не выдаёт `SCALE`.
+10. **Product comparison:** primary denominator - pre-outcome matched
+    started/assigned jobs; completion и quality являются outcomes;
+    per-completed-job вторичен.
+11. **Feasibility:** один offline CPU batch flow, один dashboard, один
+    evidence passport, один reconciled economics card и один evaluation report;
+    сеть, H100, local LLM, causal pilot и MLOps не блокируют demo.
+12. **Honest labels:** `SYNTHETIC`, `E0`, `E1`, `E2/E3` и `N/A` визуально и
+    семантически не смешиваются.
 
-Gate 1 не подтверждает экономический эффект КРОК. Он подтверждает только, что
-стратегия корректно ставит вопрос, не допускает двойного счёта и задаёт
-проверяемый путь от expert proxy к causal validation.
+Полная аргументация, blocking/important/optional замечания и вопросы жюри
+зафиксированы в `docs/RED_TEAM.md`.
