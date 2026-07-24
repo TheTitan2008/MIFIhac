@@ -42,7 +42,7 @@ py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e .
 
 $xlsx = 'C:\Users\aleks\Downloads\Темы для генерации датасета.xlsx'
-.\.venv\Scripts\python.exe -m prompt_radar smoke `
+.\.venv\Scripts\python.exe -m prompt_radar run `
   --input $xlsx `
   --output artifacts\latest
 ```
@@ -53,12 +53,65 @@ Linux/macOS:
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python -m pip install -e .
-.venv/bin/python -m prompt_radar smoke \
+.venv/bin/python -m prompt_radar run \
   --input "/path/to/Темы для генерации датасета.xlsx" \
   --output artifacts/latest
 ```
 
-Успешный smoke завершается кодом `0` и печатает `failures: []`.
+Команда `run` формирует offline artifacts и завершается кодом `0`.
+Команда `smoke` сохраняет раскрытый sealed v1 как исторический diagnostic; его
+честный `sealed-classification-gate` не исправляется и не используется для
+tuning recovery candidate.
+
+## OpenAI-compatible messages
+
+Recovery adapter принимает payload с `model`, `stream` и `messages`. Он
+разделяет последний current user goal, task wrapper, RAG context, историю
+user/assistant, system/developer и tool messages. Классификация выполняется по
+current goal; длинный контекст не подменяет intent.
+
+В default persisted projection сохраняются redacted goal, размеры секций,
+token estimates, context/goal ratio и технические flags. Полные system,
+assistant и RAG тексты не сохраняются.
+
+Правила разметки: `docs/LABEL_GUIDE.md`.
+
+## External opaque evaluation
+
+После freeze внешний challenge запускается без обновления classifier,
+taxonomy, thresholds или guide:
+
+```powershell
+.\.venv\Scripts\python.exe -m prompt_radar evaluate-external `
+  --input challenge.jsonl `
+  --output artifacts\external
+```
+
+Одна строка JSONL:
+
+```json
+{
+  "request_id": "opaque-001",
+  "payload": {
+    "model": "openai-compatible-model",
+    "stream": true,
+    "messages": [
+      {"role": "user", "content": "Найди документ в Confluence"}
+    ]
+  },
+  "expected_labels": {
+    "system": ["Confluence"],
+    "intent": ["search"],
+    "object": ["document"],
+    "automation_mode": ["one_shot"],
+    "business_domain": ["knowledge"]
+  }
+}
+```
+
+Интерфейс пишет `evaluation.json`, frozen `manifest.json` и безопасный
+`parsed_requests.jsonl`. Он только измеряет заранее определённые метрики и не
+выполняет fit/tuning.
 
 ## Dashboard
 

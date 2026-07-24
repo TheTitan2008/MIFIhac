@@ -29,8 +29,8 @@ SEALED_CHALLENGE = [
 TOPIC_GOLD: dict[str, dict[str, list[str]]] = {
     "A3": {"system": ["Email"], "intent": ["summarize"], "object": ["email"], "automation_mode": ["one_shot"], "business_domain": ["productivity"]},
     "A4": {"system": ["CRM"], "intent": ["search"], "object": ["client", "deal"], "automation_mode": ["one_shot"], "business_domain": ["sales"]},
-    "A5": {"system": ["Email"], "intent": ["monitor"], "object": ["email"], "automation_mode": ["recurring"], "business_domain": ["productivity"]},
-    "A6": {"system": ["CRM", "Email"], "intent": ["summarize", "notify"], "object": ["deal", "tender"], "automation_mode": ["recurring"], "business_domain": ["sales"]},
+    "A5": {"system": ["Email"], "intent": ["monitor"], "object": ["email"], "automation_mode": ["recurring", "monitoring"], "business_domain": ["productivity"]},
+    "A6": {"system": ["CRM", "Email"], "intent": ["summarize", "notify"], "object": ["deal", "tender"], "automation_mode": ["recurring", "notification"], "business_domain": ["sales"]},
     "A7": {"system": ["CRM"], "intent": ["search"], "object": ["client", "project"], "automation_mode": ["one_shot"], "business_domain": ["projects"]},
     "A8": {"system": ["OpenWeb"], "intent": ["search", "summarize"], "object": ["client", "document"], "automation_mode": ["one_shot"], "business_domain": ["sales"]},
     "A9": {"system": ["CRM", "Excel"], "intent": ["search", "export"], "object": ["client", "report"], "automation_mode": ["one_shot"], "business_domain": ["sales"]},
@@ -57,7 +57,7 @@ TOPIC_GOLD: dict[str, dict[str, list[str]]] = {
     "A30": {"system": ["Calendar"], "intent": ["create", "notify"], "object": ["task", "meeting"], "automation_mode": ["notification"], "business_domain": ["productivity"]},
     "A31": {"system": ["Calendar"], "intent": ["search"], "object": ["meeting"], "automation_mode": ["one_shot"], "business_domain": ["productivity"]},
     "A32": {"system": ["Email", "Project"], "intent": ["create"], "object": ["email", "task"], "automation_mode": ["one_shot"], "business_domain": ["projects"]},
-    "A33": {"system": ["ISUP"], "intent": ["monitor", "notify"], "object": ["project"], "automation_mode": ["recurring"], "business_domain": ["projects"]},
+    "A33": {"system": ["ISUP"], "intent": ["monitor", "notify"], "object": ["project"], "automation_mode": ["recurring", "monitoring", "notification"], "business_domain": ["projects"]},
 }
 
 MANUAL_CHALLENGE: list[tuple[str, dict[str, list[str]]]] = [
@@ -83,7 +83,7 @@ MANUAL_CHALLENGE: list[tuple[str, dict[str, list[str]]]] = [
     ),
     (
         "Следи за письмами без ответа и напомни через два часа.",
-        {"system": ["Email"], "intent": ["monitor", "notify"], "object": ["email"], "automation_mode": ["one_shot"], "business_domain": ["productivity"]},
+        {"system": ["Email"], "intent": ["monitor", "notify"], "object": ["email"], "automation_mode": ["monitoring", "notification"], "business_domain": ["productivity"]},
     ),
     (
         "Добавь задачу в ИСУП и обнови её статус.",

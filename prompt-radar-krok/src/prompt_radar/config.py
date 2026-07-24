@@ -2,9 +2,9 @@ from __future__ import annotations
 
 SEED = 20260724
 DATASET_VERSION = "synthetic-v1"
-SCHEMA_VERSION = "request-event-v1"
-TAXONOMY_VERSION = "taxonomy-v1"
-ALGORITHM_VERSION = "offline-hash-v1"
+SCHEMA_VERSION = "request-event-v2-openai-messages"
+TAXONOMY_VERSION = "taxonomy-v2-label-guide"
+ALGORITHM_VERSION = "offline-message-aware-v2"
 SEALED_SOURCE_TOPIC = "A32"
 ABSTAIN_THRESHOLD = 0.58
 KNOWN_MATCH_THRESHOLD = 0.48
@@ -42,7 +42,9 @@ SYSTEM_KEYWORDS = {
 }
 
 INTENT_KEYWORDS = {
-    "search": ("найт", "покаж", "поиск", "узнать", "собрать информацию", "контакт"),
+    "search": (
+        "найт", "найд", "покаж", "поиск", "узнать", "собрать информацию", "контакт",
+    ),
     "summarize": ("сводк", "саммар", "итог", "структурир", "обзор", "собер", "результат"),
     "create": ("созда", "добав", "завест", "завед", "запис", "перенес", "преврат", "сформир"),
     "update": ("редакт", "актуализ", "измен", "подтверд", "статус"),

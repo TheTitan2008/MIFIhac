@@ -36,13 +36,14 @@ def classify(text: str) -> tuple[dict[str, list[str]], dict[str, float], list[st
     if "без ответа" in normalized and "reply" in intents:
         intents.remove("reply")
 
+    mode = []
     if any(word in normalized for word in ("еженедель", "периодич", "регуляр", "каждый")):
-        mode = ["recurring"]
-    elif any(word in normalized for word in ("монитор", "отслеж", "контрол")):
-        mode = ["monitoring"]
-    elif any(word in normalized for word in ("уведом", "напомин", "подсвеч")):
-        mode = ["notification"]
-    else:
+        mode.append("recurring")
+    if any(word in normalized for word in ("монитор", "отслеж", "контрол", "следи")):
+        mode.append("monitoring")
+    if any(word in normalized for word in ("уведом", "напомин", "подсвеч")):
+        mode.append("notification")
+    if not mode:
         mode = ["one_shot"]
 
     if any(system in systems for system in ("CRM",)) or any(word in normalized for word in ("клиент", "тендер", "продаж")):
@@ -59,7 +60,7 @@ def classify(text: str) -> tuple[dict[str, list[str]], dict[str, float], list[st
     labels = {
         "system": systems,
         "intent": intents,
-        "object": objects[:2],
+        "object": objects,
         "automation_mode": mode,
         "business_domain": domain,
     }
