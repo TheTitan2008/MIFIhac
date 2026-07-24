@@ -5,8 +5,8 @@
 
 ## Статус
 
-- Этап: независимый red-team завершён, реализация ещё не начиналась
-- Gate 1: **GO** только для одного hackathon vertical slice
+- Этап: Gate-1 offline batch vertical slice реализован и проверен
+- Gate 1: **PASS** для одного hackathon vertical slice; это не production gate
 - Архитектура: Evidence-First Opportunity Radar с run-level unit economics
   сохранена после точечных исправлений red-team
 - Главная демонстрационная история: sealed synthetic challenge
@@ -16,6 +16,39 @@
   DuckDB/Parquet и Streamlit; LLM не входит в критический путь
 - Ограничение вердикта: Gate не подтверждает ROI КРОК, production readiness
   или causal superiority agent platform над web chat
+
+## Статус реализации P0/P1
+
+Дата проверки: 2026-07-24.
+
+- Ветка: `codex/p0-vertical-slice`; изменений в `main` не выполнялось.
+- Реализован один offline CPU batch flow от исходного `A3:A33` XLSX до
+  DuckDB/Parquet, evaluation report, статического HTML и Streamlit dashboard.
+- `A32` и шесть независимо сформулированных производных находятся только в
+  sealed test; dev/catalog/tuning их не содержат. Exact/near-duplicate leakage
+  report: 0.
+- Sealed residual passport имеет статус `emerging`, support 5 независимых
+  canonical groups и mean/core aligned Jaccard 0.80 на 10 perturbation runs.
+- Expected labels зафиксированы отдельным source-row/manual rubric и не
+  вычисляются classifier; permutation test снижает score. На последнем clean
+  run micro-F1: overall synthetic dev/test 0.7241, sealed synthetic 0.9512 при
+  coverage 1.0, manual 0.9783 при coverage 0.875. Низкий общий synthetic score
+  не скрывается; Gate-классификация относится к sealed challenge, а перенос на
+  реальные логи не заявляется.
+- Security fixture: email, телефон и seeded secret удалены до persistence;
+  long-input injection обнаружена; persisted-artifact scan не нашёл canary;
+  конфигурация не изменилась.
+- 100k start/middle/end/injection suite прошёл на локальном CPU: p95 0.2115 s,
+  peak traced sketch memory 11.41 MB. Метрики привязаны к hardware profile в
+  `long_input.json` и не являются универсальным benchmark.
+- Economics model check сохраняет success/partial/failed/cancelled в
+  denominator, считает четыре distinct business tasks, даёт нулевую ошибку
+  child-cost reconciliation и ограничивает действие уровнем `VALIDATE` на E0.
+- Семь unit/integration tests проходят. Два неизменных запуска дали одинаковый
+  fingerprint:
+  `f6cea85dd68b558096a80751696b4940f7188f00df84242d823fb43f6adcc3da`.
+- P2/P3, product comparison, causal estimates, GPU, external/local LLM,
+  real-time и MLOps не начинались.
 
 ## Принятые решения
 
